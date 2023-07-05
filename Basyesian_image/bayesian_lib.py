@@ -3,9 +3,10 @@ import numpy as np
 import cv2
 import math
 import matplotlib.pyplot as plt
+import pickle
 
 #Bayesain Segmentation for binary class
-class Bayesian():
+class Bayesian_Segmentation():
     def __init__(self, n_features=3, name_features=['Blue channel', 'Green channel', 'Red channel']):
         self.n_features = n_features
         self.name_features = name_features
@@ -261,8 +262,25 @@ class Bayesian():
             
         else: print('Not it data yet')
 
-    def load_obj():
+def save_bayesian_obj(filepath:str, obj):
+    with open(filepath, 'wb') as file:
+        pickle.dump(obj, file)
+    print(f'Object successfully saved to "{filepath}"')
+     
+def load_bayesian_obj(filepath):
+    with open(filepath, 'rb') as file:
+        obj = pickle.load(file)
+    print(f'Object successfully loaded "{filepath}"')
+    return obj
+
+#Bayesain Classification
+class Bayesian_Classsification():
+    def __init__(self) -> None:
         pass
 
-    def save_obj():
+    def fit(self):
         pass
+
+    def predict(self):
+        pass
+

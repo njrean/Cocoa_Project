@@ -24,7 +24,7 @@ class Prep_cocoa():
     def __init__(self, low_pass_length):
         self.low_pass_kernel = lowpass_kernel(low_pass_length)
         self.derivative_kernel = np.array([10, 0, -10])
-        self.value_start = 0.01
+        self.value_start = 0.04
         self.half_stop = -0.06
     
     def crop(self, mask, RoI=[], Horizon=False):
@@ -48,20 +48,34 @@ class Prep_cocoa():
         flag = 0
         v_old = 0
 
-        for i, v in enumerate(dif_vector):
+        # for i, v in enumerate(dif_vector):
+        #     if flag == 0 and v >= self.value_start:
+        #         start_idx.append(i+offset)
+        #         flag = 1
+
+        #     elif flag == 1 and v < self.half_stop and v > v_old:
+        #         flag = 2
+
+        #     elif flag == 2 and v >= -0.0005:
+        #         stop_idx.append(i+offset)
+        #         flag = 0
+
+        #     v_old = v
+
+        for i, v in enumerate(low_pass_vector):
             if flag == 0 and v >= self.value_start:
                 start_idx.append(i+offset)
                 flag = 1
 
-            elif flag == 1 and v < self.half_stop and v > v_old:
+            elif flag == 1 and v < v_old:
                 flag = 2
 
-            elif flag == 2 and v >= -0.0005:
+            elif flag == 2 and v <= self.value_start:
                 stop_idx.append(i+offset)
                 flag = 0
 
             v_old = v
-
+        
         start_idx = start_idx[:len(stop_idx)]
         bound = np.array([start_idx, stop_idx]).T
         sep_mask = []
@@ -194,9 +208,3 @@ class Camera():
         self.camera_matrix = np.array(loadeddict.get('camera_matrix'))
         self.coeff = np.array(loadeddict.get('dist_coeff'))
         f.close()
-
-# class pipline():
-#     def __init__(self):
-#         pass
-
-#     def 
