@@ -21,10 +21,13 @@ from PyQt5.QtWidgets import (QMainWindow,
                             QApplication, 
                             QStyleFactory,
                             )
+from pyqtgraph import PlotWidget, plot
 
 from lib.Camera import Camera
 from lib.Proprocessing import Preprocessing
 from lib.Bayesian_Segmentation import Bayesian_Segmentation
+from lib.Tracker import Tracker
+from lib.function import crop_bean, find_centroid_conner
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
@@ -32,32 +35,38 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
 
 class MainWindow(QMainWindow): 
     def __init__(self, webcam:Camera, 
-                 preprocessing:Preprocessing, 
-                 model_segment:Bayesian_Segmentation):
+                preprocessing:Preprocessing, 
+                model_segment:Bayesian_Segmentation,
+                tracker:Tracker):
         
         super(MainWindow, self).__init__()
-        main_widget = Main_widget(webcam, preprocessing, model_segment)
+        main_widget = Main_widget(webcam, preprocessing, model_segment, tracker)
         self.setCentralWidget(main_widget)
 
 class Main_widget(QWidget):
     def __init__(self, webcam:Camera, 
-                 preprocessing:Preprocessing,
-                 model_segment:Bayesian_Segmentation):
+                preprocessing:Preprocessing,
+                model_segment:Bayesian_Segmentation,
+                tracker:Tracker):
         
         super(Main_widget, self).__init__()
         self.webcam = webcam
         self.preprocessing = preprocessing
         self.model_segment = model_segment
+        self.tracker = tracker
 
         #Stream Video
-        self.disply_width = preprocessing.original_image_w
-        self.display_height = preprocessing.original_image_h * 2
+        self.disply_width = int(preprocessing.original_image_w/2)
+        self.display_height = preprocessing.original_image_h
         self.video_label = QLabel(self)
         self.video_label.resize(self.disply_width, self.display_height)
 
         self.thread = VideoThread(webcam, preprocessing)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
+
+        #graph plot 
+        self.graphWidget = PlotWidget()
 
         #Group of control
         group_botton = QGroupBox('Control')
@@ -80,6 +89,7 @@ class Main_widget(QWidget):
         main_layout = QGridLayout()
         main_layout.addWidget(self.video_label, 0, 0, 6, 3)
         main_layout.addWidget(group_botton, 3, 4, 1, 1)
+        # main_layout.addWidget(self.graphWidget, 0, 3, 3, 3)
         self.setLayout(main_layout)
         
     def closeEvent(self, event):
@@ -92,16 +102,23 @@ class Main_widget(QWidget):
         flag_show = self.activate_segment.box.currentText()
 
         _, img_crop, img_extract = self.preprocessing.preprocess_pipeline(cv_img)
-        # print(img_extract.shape)
+
         mask, prob_map = self.model_segment.segment(img_extract, 
                                                     k=[0.1, 0.1, 0, 0.3, 0.4, 0.3], 
                                                     threshold=0.35, 
                                                     filter=True)
 
+        lowpass_vector, bound, sep_mask, flag_found = crop_bean(mask)
+
+        # self.graphWidget.setBackground('w')
+        # self.graphWidget.clear()
+        # self.graphWidget.plot(list(range(0, len(lowpass_vector))), list(lowpass_vector))
+
         if flag_show == 'Transform': 
             img_show = img_crop
 
         elif flag_show == 'Mask':
+          
             img_show = np.repeat((mask*255).astype(np.uint8), 3, axis=1).reshape(img_crop.shape)
 
         elif flag_show == 'Probability Map':
@@ -111,6 +128,25 @@ class Main_widget(QWidget):
             mask_repeat = np.repeat((mask*255).astype(np.uint8), 3, axis=1).reshape(img_crop.shape)
             img_show = cv2.bitwise_and(img_crop, mask_repeat)
 
+        centroidInput = []
+
+        if flag_found:
+            for i, bean_bound in enumerate(bound):
+                _, centroid = find_centroid_conner(sep_mask[i])
+                cen_x = int(centroid[1])+bean_bound[0] #need to add offset in x axis
+                cen_y = int(centroid[0])
+                centroidInput.append((cen_x, cen_y))
+
+                img_show[:, bean_bound[0]-2:bean_bound[0]+2,:] = 0
+                img_show[:, bean_bound[1]-2:bean_bound[1]+2 ,:] = 0
+                img_show[:, bean_bound[0]-2:bean_bound[0]+2 ,1] = 255
+                img_show[:, bean_bound[1]-2:bean_bound[1]+2 ,1] = 255
+                img_show[cen_y-4:cen_y+4, cen_x-4:cen_x+4, :] = 0
+                img_show[cen_y-4:cen_y+4, cen_x-4:cen_x+4, 2] = 255
+
+        # centroid_update = self.centroidTracker.update(centroidInput)
+        # print(centroidInput, centroid_update)
+        
         img_show = np.pad(img_show, ((self.preprocessing.ROI_up, cv_img.shape[0]-self.preprocessing.ROI_down), 
                                             (self.preprocessing.ROI_left, cv_img.shape[1]-self.preprocessing.ROI_right),
                                             (0, 0)), 'constant')

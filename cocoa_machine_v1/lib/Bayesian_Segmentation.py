@@ -10,7 +10,7 @@ from lib.function import read_yaml
 #Bayesain Segmentation for binary class (Cocoa and Background)
 class Bayesian_Segmentation():
     def __init__(self, n_features=6, 
-                 name_features=['Y channel', 
+                name_features=['Y channel', 
                 'Cb channel', 
                 'Cr channel',
                 'Blue channel', 
@@ -191,8 +191,8 @@ class Bayesian_Segmentation():
 
     def segment(self, image_arr, k, threshold=0.9, RoI=[], filter=False):
 
-        if RoI != []:
-            image_arr = image_arr[RoI[0]:-RoI[1], RoI[2]:-RoI[3], :]
+        # if RoI != []:
+        #     image_arr = image_arr[RoI[0]:-RoI[1], RoI[2]:-RoI[3], :]
 
         h = image_arr.shape[0]
         w = image_arr.shape[1]
@@ -212,8 +212,8 @@ class Bayesian_Segmentation():
         if filter==True:
             prob_map = cv2.filter2D(src=prob_map, ddepth=-1, kernel=self.kernel)
 
-        if RoI != []:
-            prob_map = np.pad(prob_map, [(RoI[0], RoI[1]), (RoI[2], RoI[3])], mode='constant', constant_values=0)
+        # if RoI != []:
+        #     prob_map = np.pad(prob_map, [(RoI[0], RoI[1]), (RoI[2], RoI[3])], mode='constant', constant_values=0)
         
         mask = np.where( prob_map > threshold, 1, 0)
 

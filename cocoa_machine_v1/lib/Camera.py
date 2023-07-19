@@ -76,6 +76,8 @@ class Camera():
     def camera_start(self):
         api_preference = cv2.CAP_V4L2
         self.cap = cv2.VideoCapture(self.camera_idx, api_preference)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.w)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.h)
 
     def capture(self):
         flag, frame = self.cap.read()

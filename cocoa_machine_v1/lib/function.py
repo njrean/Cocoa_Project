@@ -29,37 +29,33 @@ def lowpass_kernel(layer:int):
         return kernel
 
 lowpass_filter = lowpass_kernel(500)
-value_start = 0.04
 
-def crop(mask, RoI=[], Horizon=False):
-        offset = 0
+def crop_bean(mask, value_consider = 0.04):
 
-        if RoI != []:
-            mask = mask[RoI[0]:-RoI[1], RoI[2]:-RoI[3]]
-            offset = 0
-
-        if Horizon == True:
-            mask = mask.T
+        mask = mask.T
 
         mean_vector = np.mean(mask, axis=1)
         low_pass_vector = np.convolve(mean_vector, lowpass_filter, 'same')
 
         start_idx = []
         stop_idx = []
-
+        
+        flag_found = 0
         flag = 0
         v_old = 0
 
         for i, v in enumerate(low_pass_vector):
-            if flag == 0 and v >= value_start:
-                start_idx.append(i+offset)
+            
+            if flag == 0 and v >= value_consider:
+                start_idx.append(i)
                 flag = 1
 
             elif flag == 1 and v < v_old:
                 flag = 2
 
-            elif flag == 2 and v <= value_start:
-                stop_idx.append(i+offset)
+            elif flag == 2 and v <= value_consider:
+                stop_idx.append(i)
+                flag_found = 1
                 flag = 0
 
             v_old = v
@@ -70,5 +66,22 @@ def crop(mask, RoI=[], Horizon=False):
 
         for i, b in enumerate(bound):
             sep_mask.append(mask[b[0]: b[1], :])
-       
-        return np.array(sep_mask, dtype=object)
+
+        return low_pass_vector, bound, np.array(sep_mask, dtype=object), flag_found
+
+#Find centroid and conner of a bean
+def find_centroid_conner(bean_mask):
+    count = np.asarray(bean_mask >= 1).nonzero()
+    xmin = np.min(count[1])
+    xmax = np.max(count[1])
+    ymin = np.min(count[0])
+    ymax = np.max(count[0])
+    cen_x = np.mean(count[1])
+    cen_y = np.mean(count[0])
+
+    return np.array([xmin, xmax, ymin, ymax]), np.round(np.array([cen_x, cen_y]))
+    
+
+# def draw_box_centroid(img, bound, ):
+
+#     pass
