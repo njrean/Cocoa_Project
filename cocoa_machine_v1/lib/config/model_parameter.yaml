@@ -1,0 +1,12 @@
+model_segment:
+  k_Y: 0.2
+  k_Cr: 0.3
+  k_Cb: 0.3
+  k_B: 0.1
+  k_G: 0.1
+  k_R: 0
+  threshold: 0.4
+  filter: True
+model_classify:
+  k: 0
+
