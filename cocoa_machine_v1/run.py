@@ -1,10 +1,12 @@
 import sys
+import numpy as np
 
 from PyQt5.QtWidgets import QApplication
 
 from lib.Camera import Camera
 from lib.Proprocessing import Preprocessing
 from lib.Bayesian_Segmentation import Bayesian_Segmentation, load_bayesian_obj
+from lib.Bayesian_Classification import Bayesian_Classsification
 from lib.UI import MainWindow
 from lib.Tracker import Tracker
 
@@ -29,11 +31,18 @@ if __name__ == "__main__":
     model_segmentation = Bayesian_Segmentation(parameter_path=model_parameter_path)
     model_segmentation = load_bayesian_obj(model_segmentation_path)
 
+    ##Classification obj
+    model_classification = Bayesian_Classsification()
+
     ##Centroid Tracker
     centroidTracker = Tracker()
 
     ##GUI
     app = QApplication(sys.argv)
-    a = MainWindow(webcam, prep, model_segmentation, centroidTracker)
+    a = MainWindow(webcam, 
+                   prep, 
+                   model_segmentation, 
+                   model_classification, 
+                   centroidTracker)
     a.show()
     sys.exit(app.exec())

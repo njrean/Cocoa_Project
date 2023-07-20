@@ -26,6 +26,7 @@ from pyqtgraph import PlotWidget, plot
 from lib.Camera import Camera
 from lib.Proprocessing import Preprocessing
 from lib.Bayesian_Segmentation import Bayesian_Segmentation
+from lib.Bayesian_Classification import Bayesian_Classsification
 from lib.Tracker import Tracker
 from lib.function import crop_bean, find_centroid_conner
 
@@ -33,26 +34,36 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
 )
 
+font = cv2.FONT_HERSHEY_SIMPLEX
+
 class MainWindow(QMainWindow): 
     def __init__(self, webcam:Camera, 
                 preprocessing:Preprocessing, 
                 model_segment:Bayesian_Segmentation,
+                model_classify:Bayesian_Classsification,
                 tracker:Tracker):
         
         super(MainWindow, self).__init__()
-        main_widget = Main_widget(webcam, preprocessing, model_segment, tracker)
+
+        main_widget = Main_widget(webcam, preprocessing, 
+                                  model_segment, 
+                                  model_classify, 
+                                  tracker)
+        
         self.setCentralWidget(main_widget)
 
 class Main_widget(QWidget):
     def __init__(self, webcam:Camera, 
                 preprocessing:Preprocessing,
                 model_segment:Bayesian_Segmentation,
+                model_classify:Bayesian_Classsification,
                 tracker:Tracker):
         
         super(Main_widget, self).__init__()
         self.webcam = webcam
         self.preprocessing = preprocessing
         self.model_segment = model_segment
+        self.model_classify = model_classify
         self.tracker = tracker
 
         #Stream Video
@@ -108,7 +119,7 @@ class Main_widget(QWidget):
                                                     threshold=0.35, 
                                                     filter=True)
 
-        lowpass_vector, bound, sep_mask, flag_found = crop_bean(mask)
+        _, bound, sep_masks, flag_found = crop_bean(mask) #mask separate bean
 
         # self.graphWidget.setBackground('w')
         # self.graphWidget.clear()
@@ -118,7 +129,6 @@ class Main_widget(QWidget):
             img_show = img_crop
 
         elif flag_show == 'Mask':
-          
             img_show = np.repeat((mask*255).astype(np.uint8), 3, axis=1).reshape(img_crop.shape)
 
         elif flag_show == 'Probability Map':
@@ -132,24 +142,39 @@ class Main_widget(QWidget):
 
         if flag_found:
             for i, bean_bound in enumerate(bound):
-                _, centroid = find_centroid_conner(sep_mask[i])
+                _, centroid = find_centroid_conner(sep_masks[i])
                 cen_x = int(centroid[1])+bean_bound[0] #need to add offset in x axis
                 cen_y = int(centroid[0])
-                centroidInput.append((cen_x, cen_y))
+                centroidInput.append([cen_x, cen_y])
+            bean_prob, beans_class = self.model_classify.predict(sep_masks)
 
-                img_show[:, bean_bound[0]-2:bean_bound[0]+2,:] = 0
-                img_show[:, bean_bound[1]-2:bean_bound[1]+2 ,:] = 0
-                img_show[:, bean_bound[0]-2:bean_bound[0]+2 ,1] = 255
-                img_show[:, bean_bound[1]-2:bean_bound[1]+2 ,1] = 255
-                img_show[cen_y-4:cen_y+4, cen_x-4:cen_x+4, :] = 0
-                img_show[cen_y-4:cen_y+4, cen_x-4:cen_x+4, 2] = 255
+        self.tracker.update(centroidInput)
 
-        # centroid_update = self.centroidTracker.update(centroidInput)
-        # print(centroidInput, centroid_update)
         
+
         img_show = np.pad(img_show, ((self.preprocessing.ROI_up, cv_img.shape[0]-self.preprocessing.ROI_down), 
                                             (self.preprocessing.ROI_left, cv_img.shape[1]-self.preprocessing.ROI_right),
                                             (0, 0)), 'constant')
+        
+        y_offset = self.preprocessing.ROI_up
+        x_offset =self.preprocessing.ROI_left
+        
+        #Draw bounding x axis / centroid / class left to right bean
+        if flag_found:
+            for i, bean_bound in enumerate(bound):
+                # img_show[:, bean_bound[0]-2+x_offset : bean_bound[0]+2+x_offset] = [0, 0, 255]
+                # img_show[:, bean_bound[1]-2+x_offset : bean_bound[1]+2+x_offset] = [0, 0, 255]
+                img_show[centroidInput[i][1]-4+y_offset:centroidInput[i][1]+4+y_offset, centroidInput[i][0]-4+x_offset:centroidInput[i][0]+4+x_offset] = [0, 255, 0]
+
+                text = "ID:{} {} P:{:.2f}".format(self.tracker.IDs[i] , self.model_classify.index2label[beans_class[i]], bean_prob[i][beans_class[i]])
+
+                img_show = cv2.putText(img_show, text, 
+                                       (bean_bound[0]+3+x_offset, y_offset-20), 
+                                       font, 
+                                       0.7, 
+                                       (255, 0, 0), 
+                                       2, 
+                                       cv2.LINE_AA)
 
         stack_image = np.concatenate((cv_img, img_show), axis=0)
 
