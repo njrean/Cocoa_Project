@@ -2,11 +2,13 @@ import sys
 import numpy as np
 
 from PyQt5.QtWidgets import QApplication
+import multiprocessing
 
 from lib.Camera import Camera
 from lib.Proprocessing import Preprocessing
 from lib.Bayesian_Segmentation import Bayesian_Segmentation, load_bayesian_obj
 from lib.Bayesian_Classification import Bayesian_Classsification
+from lib.Scheduler import Scheduler
 from lib.UI import MainWindow
 from lib.Tracker import Tracker
 
@@ -34,8 +36,11 @@ if __name__ == "__main__":
     ##Classification obj
     model_classification = Bayesian_Classsification()
 
-    ##Centroid Tracker
+    ##Tracker
     centroidTracker = Tracker()
+
+    #Scheduler
+    scheduler = Scheduler(prep.ref_point_x)
 
     ##GUI
     app = QApplication(sys.argv)
@@ -43,6 +48,14 @@ if __name__ == "__main__":
                    prep, 
                    model_segmentation, 
                    model_classification, 
-                   centroidTracker)
-    a.show()
-    sys.exit(app.exec())
+                   centroidTracker,
+                   scheduler)
+#     a.show()
+#     sys.exit(app.exec())
+
+# while(1):
+#     scheduler = Scheduler(100)
+#     value = input("Type integer 0, 1, 2, 3")
+#     scheduler.buffer_test = int(value)
+#     scheduler.calculate_data_send()
+#     scheduler.send_UART()

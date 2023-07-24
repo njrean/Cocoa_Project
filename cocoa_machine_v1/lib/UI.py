@@ -28,6 +28,7 @@ from lib.Proprocessing import Preprocessing
 from lib.Bayesian_Segmentation import Bayesian_Segmentation
 from lib.Bayesian_Classification import Bayesian_Classsification
 from lib.Tracker import Tracker
+from lib.Scheduler import Scheduler
 from lib.function import crop_bean, find_centroid_conner
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
@@ -36,19 +37,26 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
+#Variable which use in multithreads
+ids = []
+classes = []
+centroids = []
+
 class MainWindow(QMainWindow): 
     def __init__(self, webcam:Camera, 
                 preprocessing:Preprocessing, 
                 model_segment:Bayesian_Segmentation,
                 model_classify:Bayesian_Classsification,
-                tracker:Tracker):
+                tracker:Tracker,
+                scheduler:Scheduler):
         
         super(MainWindow, self).__init__()
 
         main_widget = Main_widget(webcam, preprocessing, 
                                   model_segment, 
                                   model_classify, 
-                                  tracker)
+                                  tracker,
+                                  scheduler)
         
         self.setCentralWidget(main_widget)
 
@@ -57,7 +65,8 @@ class Main_widget(QWidget):
                 preprocessing:Preprocessing,
                 model_segment:Bayesian_Segmentation,
                 model_classify:Bayesian_Classsification,
-                tracker:Tracker):
+                tracker:Tracker,
+                scheduler:Scheduler):
         
         super(Main_widget, self).__init__()
         self.webcam = webcam
@@ -65,6 +74,7 @@ class Main_widget(QWidget):
         self.model_segment = model_segment
         self.model_classify = model_classify
         self.tracker = tracker
+        self.scheduler = scheduler
 
         #Stream Video
         self.disply_width = int(preprocessing.original_image_w/2)
@@ -110,6 +120,7 @@ class Main_widget(QWidget):
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
 
+
         flag_show = self.activate_segment.box.currentText()
 
         _, img_crop, img_extract = self.preprocessing.preprocess_pipeline(cv_img)
@@ -139,6 +150,7 @@ class Main_widget(QWidget):
             img_show = cv2.bitwise_and(img_crop, mask_repeat)
 
         centroidInput = []
+        beans_class = []
 
         if flag_found:
             for i, bean_bound in enumerate(bound):
@@ -149,13 +161,14 @@ class Main_widget(QWidget):
             bean_prob, beans_class = self.model_classify.predict(sep_masks)
 
         self.tracker.update(centroidInput)
-
-        
+        self.scheduler.plan(self.tracker.IDs, beans_class, centroidInput)
+        print(self.scheduler.heap_timestamp)
 
         img_show = np.pad(img_show, ((self.preprocessing.ROI_up, cv_img.shape[0]-self.preprocessing.ROI_down), 
                                             (self.preprocessing.ROI_left, cv_img.shape[1]-self.preprocessing.ROI_right),
                                             (0, 0)), 'constant')
         
+        #Get offset to draw in padded image
         y_offset = self.preprocessing.ROI_up
         x_offset =self.preprocessing.ROI_left
         
@@ -190,7 +203,7 @@ class Main_widget(QWidget):
         convert_to_Qt_format = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
         p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.AspectRatioMode.KeepAspectRatio)
         return QPixmap.fromImage(p)
-    
+     
     def setting_on_click(self):
         config_window = ConfigWindow(self.webcam, self.preprocessing)
         config_window.exec()

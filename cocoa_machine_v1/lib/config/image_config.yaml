@@ -1,12 +1,12 @@
-Boundary_DOWN: 403
+Boundary_DOWN: 400
 Boundary_LEFT: 269
 Boundary_RIGHT: 1011
-Boundary_UP: 285
-Rotation_z: -4
+Boundary_UP: 283
+Rotation_z: -1
 Translation_x: 0
 Translation_y: 0
 original_image_h: 720
 original_image_w: 1280
-reference_point_x: 320
+reference_point_x: 500
 reference_point_y: 320
 unit_transition: 5
