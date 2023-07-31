@@ -26,8 +26,10 @@ class Preprocessing():
         self.ROI_left = self.data['Boundary_LEFT']
         self.ROI_right = self.data['Boundary_RIGHT']
 
-        self.ref_point_x = self.data['reference_point_x']
-        self.ref_point_y = self.data['reference_point_y']
+        self.ref_point1_x = self.data['reference_point1_x']
+        self.ref_point1_y = self.data['reference_point1_y']
+        self.ref_point2_x = self.data['reference_point2_x']
+        self.ref_point2_y = self.data['reference_point2_y']
         self.unit = self.data['unit_transition']
         
         self.center_x = math.floor(self.original_image_w/2)
@@ -103,8 +105,10 @@ class Preprocessing():
         self.ROI_left = self.data['Boundary_LEFT']
         self.ROI_right = self.data['Boundary_RIGHT']
 
-        self.ref_point_x = self.data['reference_point_x']
-        self.ref_point_y = self.data['reference_point_y']
+        self.ref_point1_x = self.data['reference_point1_x']
+        self.ref_point1_y = self.data['reference_point1_y']
+        self.ref_point2_x = self.data['reference_point2_x']
+        self.ref_point2_y = self.data['reference_point2_y']
         self.unit = self.data['unit_transition']
         
         self.center_x = math.floor(self.original_image_w/2)
